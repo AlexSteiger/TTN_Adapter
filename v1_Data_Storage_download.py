@@ -11,7 +11,7 @@ theAPIKey = "NNSXS.LFKZMYHWIZAXYJQL4TK6PER3CKXX4XNSZULY4EA.YJ7B4GEBZVEDLG6UPTQWV
 # Note the path you have to specify. Double note that it has be prefixed with up.
 theFields = "up.uplink_message.decoded_payload,up.uplink_message.frm_payload"
 
-theNumberOfRecords = 3
+theNumberOfRecords = 10
 
 theURL = "https://eu1.cloud.thethings.network/api/v3/as/applications/" + theApplication + "/packages/storage/uplink_message?order=-received_at&limit=" + str(theNumberOfRecords) + "&field_mask=" + theFields
 
@@ -41,15 +41,14 @@ print()
 # than one record, we are sent the chunks with a blank line between them and
 # no [] to turn it in to an array. So we have to here, as at 17th March 2021
 
-theJSON = "[" + r.text.replace("\n\n", ",")[:-1] + "]";
-#theJSON = "{\"data\": [" + r.text.replace("\n\n", ",")[:-1] + "]}";
+theJSON = "{\"data\": [" + r.text.replace("\n\n", ",")[:-1] + "]}";
 
+print("JSON: ")
 parsedJSON = json.loads(theJSON)
 
 with open('response.json', 'w') as f:
 	json.dump(parsedJSON, f)
-	
-print("JSON: ")
+
 print(json.dumps(parsedJSON, indent=4))
 print()
 
