@@ -39,9 +39,8 @@ print()
 # formed blocks of JSON as a chunk or a message becomes available. We can't 
 # subscribe to this stream due to CORS restrictions and if we ask for more 
 # than one record, we are sent the chunks with a blank line between them and
-# no [] to turn it in to an array. So we have to here, as at 17th March 2021
-
-theJSON = "{\"data\": [" + r.text.replace("\n\n", ",")[:-1] + "]}";
+ 
+theJSON = "[{\"data\": [" + r.text.replace("\n\n", ",")[:-1] + "]}]";
 
 print("JSON: ")
 parsedJSON = json.loads(theJSON)

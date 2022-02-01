@@ -1,0 +1,27 @@
+[
+    {
+        "p_id": 1,
+        "first_name": "Jane",
+        "last_name": "Doe",
+        "p_attribute": {
+            "age": "37",
+            "hair_color": "blue",
+            "profession": "example",
+            "favourite_quote": "I am the classic example"
+        },
+        "quote_content": "I am the classic example"
+    },
+    {
+        "p_id": 2,
+        "first_name": "Gordon",
+        "last_name": "Ramsay",
+        "p_attribute": {
+            "age": "53",
+            "hair_color": "blonde",
+            "profession": "chef",
+            "favourite_quote": "Where is the lamb sauce?!"
+        },
+        "quote_content": "where is the sauce?"
+    }
+]
+
