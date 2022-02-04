@@ -6,6 +6,15 @@
   "active" : true,
   "members" : [
     {
+      "name" : "Radiating Rat",
+      "age" : 3,
+      "secretIdentity" : "Ron Ratting",
+      "powers" : [
+        "Bite",
+        "Glowing in the Dark"
+      ]
+    },
+    {
       "name" : "Molecule Man",
       "age" : 29,
       "secretIdentity" : "Dan Jukes",
