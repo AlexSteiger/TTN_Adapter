@@ -1,15 +1,9 @@
 #!/usr/bin/python3
 
-import psycopg2
+#import psycopg2 #alternative to sqlalchemy to make a connection to psql
 import json
 import pandas as pd
 from sqlalchemy import create_engine
-
-""" Conversation table:
-    JSON      Python
-    object    dict
-    array     list
-    string    str """
 
 # json.loads produces a JSON document to a python document (see conversation table)
 with open("superheroes.json") as json_data:
@@ -26,12 +20,12 @@ print("json.dumps record list: ",type(json.dumps(record_list)))
 normalized = pd.json_normalize(record_list, record_path = ['members'], meta = ['squadName', 'homeTown'])
 print(normalized)
 
-# subset of the normalized dataframe
-dataFrame = normalized[["name","age","homeTown"]].head(3).sort_values(by=['name'])
-print(dataFrame)
-
 # access a two times nested json
 #normalized = pd.json_normalize(data=record_list['members'], record_path = ["powers"], meta = ['name'])
+
+# subset of the normalized dataframe
+df = normalized[["name","age","homeTown"]].head(4).sort_values(by=['name'])
+print("incoming_df:\n", df)
 
 # create_engine(dialect+driver://username:password@host:port/database)
 alchemyEngine = create_engine('postgresql+psycopg2://postgres:postgres@127.0.0.1/json', pool_recycle=3600);
@@ -40,19 +34,18 @@ postgreSQLConnection = alchemyEngine.connect();
 
 postgreSQLTable      = "superheroes1";
 
-try:
-    frame = dataFrame.to_sql(postgreSQLTable, postgreSQLConnection, if_exists='fail');
+psql_df = pd.read_sql('select * from superheroes1', con=postgreSQLConnection)
 
-except ValueError as vx:
-    print(vx)
+psql_df = psql_df[["name", "age", "homeTown"]]
+print("psql_df:\n",psql_df)
 
-except Exception as ex:  
-    print(ex)
+df_unique = pd.concat([df,psql_df]).drop_duplicates(keep=False)
 
-else:
-    print("PostgreSQL Table %s has been created successfully."%postgreSQLTable);
+print("df_new:\n", df_unique)
 
-finally:
-    postgreSQLConnection.close();
+frame = df_unique.to_sql(postgreSQLTable, postgreSQLConnection, if_exists='append');
+
+
+postgreSQLConnection.close();
 
 

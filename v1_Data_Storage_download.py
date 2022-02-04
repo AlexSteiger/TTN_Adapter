@@ -11,7 +11,7 @@ theAPIKey = "NNSXS.LFKZMYHWIZAXYJQL4TK6PER3CKXX4XNSZULY4EA.YJ7B4GEBZVEDLG6UPTQWV
 # Note the path you have to specify. Double note that it has be prefixed with up.
 theFields = "up.uplink_message.decoded_payload,up.uplink_message.frm_payload"
 
-theNumberOfRecords = 10
+theNumberOfRecords = 1000
 
 theURL = "https://eu1.cloud.thethings.network/api/v3/as/applications/" + theApplication + "/packages/storage/uplink_message?order=-received_at&limit=" + str(theNumberOfRecords) + "&field_mask=" + theFields
 
@@ -29,9 +29,9 @@ print()
 print("Status: " + str(r.status_code))
 print()
 
-print("Response: ")
-print(r.text)
-print()
+#print("Response: ")
+#print(r.text)
+#print()
 
 
 # Due to some design choices by TTI, the text returned is not proper JSON.
@@ -39,15 +39,16 @@ print()
 # formed blocks of JSON as a chunk or a message becomes available. We can't 
 # subscribe to this stream due to CORS restrictions and if we ask for more 
 # than one record, we are sent the chunks with a blank line between them and
- 
-theJSON = "[{\"data\": [" + r.text.replace("\n\n", ",")[:-1] + "]}]";
 
-print("JSON: ")
+theJSON = "{\"data\": [" + r.text.replace("\n\n", ",")[:-1] + "]}";
+#print(theJSON)
+
+#print("JSON: ")
 parsedJSON = json.loads(theJSON)
 
-with open('response.json', 'w') as f:
+with open('TTNresponse.json', 'w') as f:
 	json.dump(parsedJSON, f)
 
-print(json.dumps(parsedJSON, indent=4))
-print()
-
+#print(json.dumps(parsedJSON, indent=4))
+#print()
+print(theNumberOfRecords, "records fetched from TTN")
