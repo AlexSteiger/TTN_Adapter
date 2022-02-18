@@ -13,8 +13,9 @@ from sqlalchemy import create_engine
 # --create postgresql database 'addferti_lorawan
 #Postgres:
 
+
 postgreSQLTable = "ard_mrk_wan_1300";
-alchemyEngine   = create_engine('postgresql+psycopg2://postgres:postgres@127.0.0.1/addferti_lorawan', pool_recycle=3600);
+alchemyEngine   = create_engine('postgresql+psycopg2://postgres:postgres@127.0.0.1:5432/addferti_lorawan', pool_recycle=3600);
                 # create_engine(dialect+driver://username:password@host:port/database)
 
 
@@ -24,7 +25,7 @@ theAPIKey = "NNSXS.LFKZMYHWIZAXYJQL4TK6PER3CKXX4XNSZULY4EA.YJ7B4GEBZVEDLG6UPTQWV
 # Note the path you have to specify. Double note that it has be prefixed with up.
 theFields = "up.uplink_message.decoded_payload,up.uplink_message.frm_payload"
 
-theNumberOfRecords = 11
+theNumberOfRecords = 10
 
 theURL = "https://eu1.cloud.thethings.network/api/v3/as/applications/" + theApplication + "/packages/storage/uplink_message?order=-received_at&limit=" + str(theNumberOfRecords) + "&field_mask=" + theFields
 
@@ -86,6 +87,8 @@ df = normalized_df[[
   "result.uplink_message.decoded_payload.relative_humidity_2",
   "result.uplink_message.decoded_payload.temperature_1"]]
 
+#df = df.reset_index()
+
 TTN_df = df.rename(columns={
   "result.end_device_ids.device_id":"device_id",
   "result.received_at":"recieved_at",
@@ -98,14 +101,21 @@ print(TTN_df)
 postgreSQLConnection = alchemyEngine.connect();
 
 try:
+  print("try...")
   psql_df = pd.read_sql('select * from ard_mrk_wan_1300', con=postgreSQLConnection)
-  psql_df = psql_df.drop(columns=['index'])
-  df_unique = pd.concat([TTN_df,psql_df]).drop_duplicates(keep=False)
+  #psql_df = psql_df.drop(columns=['index'])
+  #print("psql_df: ")
+  #print(psql_df)
+  #print(TTN_df.compare(psql_df))
+  df_unique = pd.concat([TTN_df,psql_df]).drop_duplicates(subset=['device_id','recieved_at'],keep=False)
+  #print("df_unique: ")
+  #print(df_unique)
   print(len(df_unique), "new rows added to the database")
-  frame = df_unique.to_sql(postgreSQLTable, postgreSQLConnection, if_exists='append');
+  frame = df_unique.to_sql(postgreSQLTable, postgreSQLConnection, index=False, if_exists='append');
 except:
+  print("except...")
   print("create table", postgreSQLTable)
-  frame = TTN_df.to_sql(postgreSQLTable, postgreSQLConnection, if_exists='fail');
+  frame = TTN_df.to_sql(postgreSQLTable, postgreSQLConnection, index=False, if_exists='fail');
 finally:
   postgreSQLConnection.close();  
 
