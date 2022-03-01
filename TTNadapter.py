@@ -4,6 +4,7 @@
 import json
 import requests
 import pandas as pd
+import datetime
 from sqlalchemy import create_engine
 
 #run the first time only to create the table:
@@ -95,6 +96,8 @@ TTN_df = df.rename(columns={
   "result.uplink_message.decoded_payload.relative_humidity_2":"relative_humidity",
   "result.uplink_message.decoded_payload.temperature_1":"temperature"})
 
+TTN_df.recieved_at = pd.to_datetime(TTN_df['recieved_at'])
+
 print("Fetched data: ")
 print(TTN_df)
 
@@ -118,4 +121,5 @@ except:
   frame = TTN_df.to_sql(postgreSQLTable, postgreSQLConnection, index=False, if_exists='fail');
 finally:
   postgreSQLConnection.close();  
+
 
