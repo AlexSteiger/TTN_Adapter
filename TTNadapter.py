@@ -97,6 +97,8 @@ TTN_df = df.rename(columns={
   "result.uplink_message.decoded_payload.temperature_1":"temperature"})
 
 TTN_df.recieved_at = pd.to_datetime(TTN_df['recieved_at'])
+TTN_df.recieved_at = TTN_df.recieved_at.round('S')
+
 
 print("Fetched data: ")
 print(TTN_df)
@@ -120,6 +122,4 @@ except:
   print("create table", postgreSQLTable)
   frame = TTN_df.to_sql(postgreSQLTable, postgreSQLConnection, index=False, if_exists='fail');
 finally:
-  postgreSQLConnection.close();  
-
-
+  postgreSQLConnection.close();

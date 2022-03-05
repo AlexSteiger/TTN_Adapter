@@ -20,13 +20,13 @@ alchemyEngine   = create_engine('postgresql+psycopg2://postgres:postgres@127.0.0
                 # create_engine(dialect+driver://username:password@host:port/database)
 
 
-theApplication = "addferti-lse01"
-theAPIKey = "NNSXS.JHAOF3IK4N2KX622MGFG4KZQLINAMVQWF5GT3MY.IWICKQQGAZPU4GV4HHB2X6BZQVHMRSVFV2YHGMR2NFD43AG26WHQ"
+theApplication = "addferti-rostock-soil-moisture"
+theAPIKey = "NNSXS.5IXRRQ74V3NDRIMSP4RQ6FZ5W5CEGL5P6QN457Q.JOIUJJ5TYRJDCMMHTZMH7HBGTPVLTHYQYZUYXFMHHOQ2WGW5DL4Q"
 
 # Note the path you have to specify. Double note that it has be prefixed with up.
 theFields = "up.uplink_message.decoded_payload,up.uplink_message.frm_payload"
 
-theNumberOfRecords = 10000
+theNumberOfRecords = 5000
 
 theURL = "https://eu1.cloud.thethings.network/api/v3/as/applications/" + theApplication + "/packages/storage/uplink_message?order=-received_at&limit=" + str(theNumberOfRecords) + "&field_mask=" + theFields
 
@@ -83,7 +83,12 @@ TTN_df = df.rename(columns={
 
 TTN_df.recieved_at = pd.to_datetime(TTN_df['recieved_at'])
 TTN_df.recieved_at = TTN_df.recieved_at.round('S')
+TTN_df.soil_ec     = pd.to_numeric(TTN_df['soil_ec'])
+TTN_df.soil_temp   = pd.to_numeric(TTN_df['soil_temp'])
+TTN_df.soil_mc     = pd.to_numeric(TTN_df['soil_mc'])
+TTN_df             = TTN_df[TTN_df['soil_temp'] != 0]
 
+print(TTN_df.dtypes)
 
 print("Fetched data: ")
 print(TTN_df)
@@ -93,7 +98,8 @@ postgreSQLConnection = alchemyEngine.connect();
 try:
   print("try...")
   psql_df = pd.read_sql('select * from ru_soil_moisture', con=postgreSQLConnection)
-  print(psql_df)
+  #print("from psql: ")
+  #print(psql_df)
   df_unique = pd.concat([TTN_df,psql_df]).drop_duplicates(subset=['device_id','recieved_at'],keep=False)
   print(len(df_unique), "new rows added to the database")
   frame = df_unique.to_sql(postgreSQLTable, postgreSQLConnection, index=False, if_exists='append');
