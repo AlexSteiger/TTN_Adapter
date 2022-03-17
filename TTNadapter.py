@@ -4,7 +4,7 @@
 import json
 import requests
 import pandas as pd
-import datetime
+from datetime import datetime
 from sqlalchemy import create_engine
 
 #run the first time only to create the table:
@@ -14,6 +14,10 @@ from sqlalchemy import create_engine
 # --create postgresql database 'addferti_lorawan
 #Postgres:
 
+now = datetime.now()
+now = str(now)
+filename = "/tmp/" + now
+with open(filename, 'w') as f: f.write('my_output_text')
 
 postgreSQLTable = "ard_mrk_wan_1300";
 alchemyEngine   = create_engine('postgresql+psycopg2://postgres:postgres@127.0.0.1:5432/addferti_lorawan', pool_recycle=3600);
