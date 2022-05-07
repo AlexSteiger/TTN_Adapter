@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 #import psycopg2 #alternative to sqlalchemy to make a connection to psql
+import time
 import json
 import requests
 import pandas as pd
@@ -97,12 +98,8 @@ postgreSQLConnection = alchemyEngine.connect();
 
 try:
   print("try...")
-  psql_df = pd.read_sql('select * from ru_soil_moisture', con=postgreSQLConnection)
-  #print("from psql: ")
-  #print(psql_df)
-  df_unique = pd.concat([TTN_df,psql_df]).drop_duplicates(subset=['device_id','recieved_at'],keep=False)
-  print(len(df_unique), "new rows added to the database")
-  frame = df_unique.to_sql(postgreSQLTable, postgreSQLConnection, index=False, if_exists='append');
+  frame = TTN_df.to_sql(postgreSQLTable, postgreSQLConnection, index=False, if_exists='append');
+  postgreSQLConnection.execute("DELETE FROM ru_soil_moisture t WHERE EXISTS (SELECT FROM ru_soil_moisture WHERE device_id = t.device_id AND recieved_at = t.recieved_at AND ctid < t.ctid order by recieved_at);")
 except:
   print("except...")
   print("create table", postgreSQLTable)
