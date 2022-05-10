@@ -12,8 +12,7 @@ from sqlalchemy import create_engine
 
 # Before running this script:
 # --pandas version >1.4.0 needs to be installed
-# --create postgresql database 'addferti_lorawan
-#Postgres:
+# --create postgresql database 'addferti_lorawan in Postgres
 
 postgreSQLTable = ["ru_soil_moisture","bursa_soil_moisture","ugent_soil_moisture"];
 
@@ -26,8 +25,7 @@ theAPIKey = [
   "NNSXS.FC4XATDRAUL22VSYSZYB7XPJQXHLZI534GVKKAY.QM5FGNQX7B6DNWE4CVD5ZYUQ6HUFQP72KX5KWTOSNTIG4TTFJX6A",
   "NNSXS.R7NNSNQE24QDNLJ7XIQD6CRBVYHCWO72C7E2REY.JN2I3FWELVV2E6CZCIAEKXNJVLB6DTJZ34JOPXMOSFTYL4PWP4DA"]
 
-for i in range(0, 3):
-  print(postgreSQLTable[i])
+def CallTTN(postgreSQLTable, theApplication, theAPIKey):
 
   # create_engine(dialect+driver://username:password@host:port/database)
   alchemyEngine = create_engine('postgresql+psycopg2://postgres:postgres@127.0.0.1:5432/addferti_lorawan');
@@ -39,20 +37,22 @@ for i in range(0, 3):
 
   theURL = ("https://eu1.cloud.thethings.network/api/v3/as/applications/{}"
             "/packages/storage/uplink_message?order=-received_at&limit={}&field_mask={}"
-            .format(theApplication[i],str(theNumberOfRecords),theFields))
+            .format(theApplication,str(theNumberOfRecords),theFields))
 
   # These are the headers required in the documentation.
-  theHeaders = { 'Accept': 'text/event-stream', 'Authorization': 'Bearer ' + theAPIKey[i] }
+  theHeaders = { 'Accept': 'text/event-stream', 'Authorization': 'Bearer ' + theAPIKey }
 
-  print("\n\nFetching from data storage  ...\n")
+  print("Fetching {} from data storage...".format(theApplication))
 
   r = requests.get(theURL, headers=theHeaders)
   #print(r.text)
 
   print("URL: " + r.url)
-  print()
   print("Status: " + str(r.status_code))
-  print()
+  
+  if not r.text:
+    print("No data to fetch on TTN")
+    exit()  
 
   theJSON = "{\"data\": [" + r.text.replace("\n\n", ",")[:-1] + "]}";
 
@@ -60,7 +60,6 @@ for i in range(0, 3):
   
   normalized_df = pd.concat([pd.DataFrame(pd.json_normalize(x)) for x in df['data']],ignore_index=True)
 
-  print("here")
   #print("column headers:")
 	#for col in normalized_df.columns:
 		#  print(col)
@@ -104,17 +103,25 @@ for i in range(0, 3):
 
   print("Fetched data: ")
   print(TTN_df)
-
+  print("-------------------------------------------------------------")
   postgreSQLConnection = alchemyEngine.connect();
 
   try:
-    frame = TTN_df.to_sql(postgreSQLTable[i], postgreSQLConnection, index=False, if_exists='append');
-    postgreSQLConnection.execute("DELETE FROM {} t WHERE EXISTS (SELECT FROM {} WHERE device_id = t.device_id AND recieved_at = t.recieved_at AND ctid < t.ctid order by recieved_at);".format(postgreSQLTable[i],postgreSQLTable[i]))
+    frame = TTN_df.to_sql(postgreSQLTable, postgreSQLConnection, index=False, if_exists='append');
+    postgreSQLConnection.execute("DELETE FROM {} t WHERE EXISTS (SELECT FROM {} "
+                                 "WHERE device_id = t.device_id "
+                                 "AND recieved_at = t.recieved_at AND ctid < t.ctid order by recieved_at);"
+                                 .format(postgreSQLTable,postgreSQLTable))
   except:
     print("except...")
-    print("create table", postgreSQLTable[i])
-    frame = TTN_df.to_sql(postgreSQLTable[i], postgreSQLConnection, index=False, if_exists='fail');
+    print("create table", postgreSQLTable)
+    frame = TTN_df.to_sql(postgreSQLTable, postgreSQLConnection, index=False, if_exists='fail');
   finally:
     postgreSQLConnection.close();
 
-
+for i in range(0, 3):
+  try:
+    CallTTN(postgreSQLTable[i], theApplication[i], theAPIKey[i])
+  except:
+    print("ERROR")  
+    pass
