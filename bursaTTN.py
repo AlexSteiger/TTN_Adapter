@@ -25,9 +25,9 @@ theApplication = "addferti-bursa-soil-moisture"
 theAPIKey = "NNSXS.FC4XATDRAUL22VSYSZYB7XPJQXHLZI534GVKKAY.QM5FGNQX7B6DNWE4CVD5ZYUQ6HUFQP72KX5KWTOSNTIG4TTFJX6A"
 
 # Note the path you have to specify. Double note that it has be prefixed with up.
-theFields = "up.uplink_message.decoded_payload,up.uplink_message.frm_payload"
+theFields = "up.uplink_message.decoded_payload,up.uplink_message.locations"
 
-theNumberOfRecords = 5000
+theNumberOfRecords = 5
 
 theURL = "https://eu1.cloud.thethings.network/api/v3/as/applications/" + theApplication + "/packages/storage/uplink_message?order=-received_at&limit=" + str(theNumberOfRecords) + "&field_mask=" + theFields
 
@@ -50,20 +50,22 @@ df = pd.read_json(theJSON)
 
 normalized_df = pd.concat([pd.DataFrame(pd.json_normalize(x)) for x in df['data']],ignore_index=True)
 
-#print("column headers:")
-	#for col in normalized_df.columns:
-	#  print(col)
-	#-------------------------------------------
-	#result.end_device_ids.device_id                     --> Device ID
-	#result.received_at                                  --> Timestamp
-	#result.uplink_message.frm_payload
-	#result.uplink_message.decoded_payload.Bat
-	#result.uplink_message.decoded_payload.TempC_DS18B20
-	#result.uplink_message.decoded_payload.conduct_SOIL  --> Soil Conductivity (uS/cm) (mikroSiemens/cm)
-        #result.uplink_message.decoded_payload.temp_SOIL     --> Soil Temperature (°C)
-        #result.uplink_message.decoded_payload.water_SOIL    --> Soil Moisture (0-100%)
-        #result.uplink_message.received_at
-	#-------------------------------------------
+    #print("column headers:")
+    #for col in normalized_df.columns:
+    #	  print(col)
+    #-------------------------------------------
+    #result.end_device_ids.device_id                     --> Device ID
+    #result.received_at                                  --> Timestamp
+    #result.uplink_message.frm_payload
+    #result.uplink_message.decoded_payload.Bat
+    #result.uplink_message.decoded_payload.TempC_DS18B20
+    #result.uplink_message.decoded_payload.conduct_SOIL  --> Soil Conductivity (uS/cm) (mikroSiemens/cm)
+    #result.uplink_message.decoded_payload.temp_SOIL     --> Soil Temperature (°C)
+    #result.uplink_message.decoded_payload.water_SOIL    --> Soil Moisture (0-100%)
+    #result.uplink_message.received_at
+    #result.uplink_message.locations.user.latitude       --> Lat
+    #result.uplink_message.locations.user.longitude      --> Long
+    #-------------------------------------------
 
 # subset of the normalized dataframe
 df = normalized_df[[
@@ -71,7 +73,9 @@ df = normalized_df[[
   "result.received_at",
   "result.uplink_message.decoded_payload.conduct_SOIL",
   "result.uplink_message.decoded_payload.temp_SOIL",
-  "result.uplink_message.decoded_payload.water_SOIL"]]
+  "result.uplink_message.decoded_payload.water_SOIL",
+  "result.uplink_message.locations.user.latitude",
+  "result.uplink_message.locations.user.longitude"]]
 
 #df = df.reset_index()
 
@@ -80,7 +84,9 @@ TTN_df = df.rename(columns={
   "result.received_at":                                 "recieved_at",
   "result.uplink_message.decoded_payload.conduct_SOIL": "soil_ec",
   "result.uplink_message.decoded_payload.temp_SOIL":    "soil_temp",
-  "result.uplink_message.decoded_payload.water_SOIL":   "soil_mc"})
+  "result.uplink_message.decoded_payload.water_SOIL":   "soil_mc",
+  "result.uplink_message.locations.user.latitude":      "lat",
+  "result.uplink_message.locations.user.longitude":     "long"})
 
 TTN_df.recieved_at = pd.to_datetime(TTN_df['recieved_at'])
 TTN_df.recieved_at = TTN_df.recieved_at.round('S')
@@ -88,6 +94,8 @@ TTN_df.soil_ec     = pd.to_numeric(TTN_df['soil_ec'])
 TTN_df.soil_temp   = pd.to_numeric(TTN_df['soil_temp'])
 TTN_df.soil_mc     = pd.to_numeric(TTN_df['soil_mc'])
 TTN_df             = TTN_df[TTN_df['soil_temp'] != 0]
+TTN_df.lat         = TTN_df.lat.round(8)
+TTN_df.long        = TTN_df.long.round(8)
 
 print(TTN_df.dtypes)
 
