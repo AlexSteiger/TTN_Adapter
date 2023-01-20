@@ -1,5 +1,7 @@
 #!/usr/bin/python3
 
+#!/usr/bin/python3
+
 #import psycopg2 #alternative to sqlalchemy to make a connection to psql
 import time
 import json
@@ -14,10 +16,12 @@ from sqlalchemy import create_engine
 # --pandas version >1.4.0 needs to be installed
 # --create postgresql database 'addferti_lorawan
 
+# Postgres:
 postgreSQLTable = ['ru_soil_moisture','bursa_soil_moisture','ugent_soil_moisture']
 alchemyEngine   = create_engine('postgresql+psycopg2://postgres:postgres@127.0.0.1:5432/addferti_lorawan', pool_recycle=3600);
                 # create_engine(dialect+driver://username:password@host:port/database)
 
+# TTN Application:
 theApplication = ['addferti-rostock-soil-moisture','addferti-bursa-soil-moisture','addferti-ugent-soil-moisture']
 theAPIKey = ['NNSXS.5IXRRQ74V3NDRIMSP4RQ6FZ5W5CEGL5P6QN457Q.JOIUJJ5TYRJDCMMHTZMH7HBGTPVLTHYQYZUYXFMHHOQ2WGW5DL4Q',
              'NNSXS.FC4XATDRAUL22VSYSZYB7XPJQXHLZI534GVKKAY.QM5FGNQX7B6DNWE4CVD5ZYUQ6HUFQP72KX5KWTOSNTIG4TTFJX6A',
@@ -80,15 +84,15 @@ for i in range(0,3):
 
         TTN_df = df.rename(columns={
           "result.end_device_ids.device_id":                    "device_id",
-          "result.received_at":                                 "recieved_at",
+          "result.received_at":                                 "time",
           "result.uplink_message.decoded_payload.conduct_SOIL": "soil_ec",
           "result.uplink_message.decoded_payload.temp_SOIL":    "soil_temp",
           "result.uplink_message.decoded_payload.water_SOIL":   "soil_mc",
           "result.uplink_message.locations.user.latitude":      "lat",
           "result.uplink_message.locations.user.longitude":     "long"})
 
-        TTN_df.recieved_at = pd.to_datetime(TTN_df['recieved_at'])
-        TTN_df.recieved_at = TTN_df.recieved_at.round('S')
+        TTN_df.time        = pd.to_datetime(TTN_df['time'])
+        TTN_df.time        = TTN_df.time.round('S')
         TTN_df.soil_ec     = pd.to_numeric(TTN_df['soil_ec'])
         TTN_df.soil_temp   = pd.to_numeric(TTN_df['soil_temp'])
         TTN_df.soil_mc     = pd.to_numeric(TTN_df['soil_mc'])
@@ -97,27 +101,67 @@ for i in range(0,3):
         TTN_df.long        = TTN_df.long.round(8)
         
         #print(TTN_df.dtypes)
-        print("Fetched data: ")
-        print(TTN_df)
+        #print("Fetched data: ")
+        #print(TTN_df)
 
         try:
             postgreSQLConnection = alchemyEngine.connect();
-            frame = TTN_df.to_sql(postgreSQLTable[i], postgreSQLConnection, index=False, if_exists='append');
+            TTN_df.to_sql(postgreSQLTable[i], postgreSQLConnection, index=False, if_exists='append');
             SQL = ("DELETE FROM %s t WHERE EXISTS (SELECT FROM %s WHERE device_id = t.device_id " 
-                   "AND recieved_at = t.recieved_at AND ctid < t.ctid "
-                   "order by recieved_at);")%(postgreSQLTable[i],postgreSQLTable[i])
+                   "AND time = t.time AND ctid < t.ctid "
+                   "order by time);")%(postgreSQLTable[i],postgreSQLTable[i])
             postgreSQLConnection.execute(SQL)
             
         except TypeError:
             print("create table", postgreSQLTable[i])
-            frame = TTN_df.to_sql(postgreSQLTable[i], postgreSQLConnection, index=False, if_exists='fail');
+            TTN_df.to_sql(postgreSQLTable[i], postgreSQLConnection, index=False, if_exists='fail');
 
     except ValueError:
-        print("Value Error. No Data from TTN to fetch")
+        print("Value Error. No Data from TTN to fetch for " + postgreSQLTable[i])
         pass
     
     finally:
         postgreSQLConnection.close();
 
+## Export the current soil moisture data as a Shapefile
+## Upload to Geonode works through copying the new shapefiles in the Geoserver Docker Container
+## sudo docker cp /data/current_ru_soil_moisture geoserver4my_geonode:/geoserver_data/data/data/geonode
+## Also the Layer and the Store need to be created once (execute )
+for i in range(0,3):
+    postgreSQLTable = ['ru_soil_moisture','bursa_soil_moisture','ugent_soil_moisture']
+    alchemyEngine   = create_engine('postgresql+psycopg2://postgres:postgres@127.0.0.1:5432/addferti_lorawan', pool_recycle=3600);
+
+    SQL = ("SELECT DISTINCT ON (device_id) " 
+           " device_id, time, soil_temp, soil_mc, soil_ec, lat, long "
+           " FROM %s ORDER BY device_id, time desc;")%(postgreSQLTable[i])
+    try:
+        df_c_smc = pd.read_sql(SQL,con=alchemyEngine)
+    except:
+        print(postgreSQLTable[i] + ' table not available.')
+    else:
+        folder = 'current_'+ postgreSQLTable[i]
+        isExist = os.path.exists(folder)
+        if not isExist:
+           # Create a new directory because it does not exist
+           os.makedirs(folder)
+
+        # pip install geopandas
 
 
+        # Transform DataFrame into a GeoDataFrame
+        gdf = geopandas.GeoDataFrame(
+            df_c_smc, geometry=geopandas.points_from_xy(df_c_smc.long, df_c_smc.lat))
+
+        # Add projection
+        gdf.crs = 'epsg:4326'
+
+        # Transform python datetime object to an string (shapefile cant read datetime format)
+        gdf['time'] = gdf['time'].dt.strftime("%Y-%m-%dT%H:%M:%S")
+
+        #print(gdf)
+        #gdf.plot()
+
+        # Export data to file
+        print('exporting: current_' + postgreSQLTable[i] + '.shp')
+        df.to_csv  (folder + '/current_' + postgreSQLTable[i]+'.csv')
+        gdf.to_file(folder + '/current_' + postgreSQLTable[i]+'.shp')
