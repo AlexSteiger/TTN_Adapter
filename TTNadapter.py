@@ -7,8 +7,10 @@ import time
 import json
 import requests
 import pandas as pd
+import geopandas
 import datetime
 from sqlalchemy import create_engine
+import os.path
 
 #run the first time only to create the table:
 
