@@ -165,5 +165,5 @@ for i in range(0,3):
 
         # Export data to file
         print('exporting: current_' + postgreSQLTable[i] + '.shp')
-        df.to_csv  (folder + '/current_' + postgreSQLTable[i]+'.csv')
+        #df.to_csv  (folder + '/current_' + postgreSQLTable[i]+'.csv')
         gdf.to_file(folder + '/current_' + postgreSQLTable[i]+'.shp')
