@@ -1,7 +1,5 @@
 #!/usr/bin/python3
 
-#!/usr/bin/python3
-
 #import psycopg2 #alternative to sqlalchemy to make a connection to psql
 import time
 import json
@@ -141,14 +139,13 @@ for i in range(0,3):
     except:
         print(postgreSQLTable[i] + ' table not available.')
     else:
-        folder = 'current_'+ postgreSQLTable[i]
+        WorkDir = os.path.realpath(os.path.dirname(__file__))
+        folder = WorkDir + '/current_'+ postgreSQLTable[i]
         isExist = os.path.exists(folder)
         if not isExist:
            # Create a new directory because it does not exist
+           print("create folder: " + folder)
            os.makedirs(folder)
-
-        # pip install geopandas
-
 
         # Transform DataFrame into a GeoDataFrame
         gdf = geopandas.GeoDataFrame(
@@ -164,6 +161,6 @@ for i in range(0,3):
         #gdf.plot()
 
         # Export data to file
-        print('exporting: current_' + postgreSQLTable[i] + '.shp')
+        print('exporting: ' + folder + '/current_' + postgreSQLTable[i] + '.shp')
         #df.to_csv  (folder + '/current_' + postgreSQLTable[i]+'.csv')
         gdf.to_file(folder + '/current_' + postgreSQLTable[i]+'.shp')
